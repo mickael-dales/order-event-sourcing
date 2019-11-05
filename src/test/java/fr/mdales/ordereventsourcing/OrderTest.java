@@ -23,7 +23,7 @@ public class OrderTest {
     }
 
     @Test
-    public void should_add_delivery_mode_chosen_event_on_event_store_if_choose_delivery_mode(){
+    public void should_add_delivery_mode_chosen_event_on_event_store_if_choose_delivery_mode() {
         EventStore eventStore = new EventStore();
         eventStore.add(new OrderCreatedEvent());
         Order order = new Order(eventStore);
@@ -35,11 +35,22 @@ public class OrderTest {
     }
 
     @Test
-    public void should_throw_exception_if_choose_delivery_mode_on_not_created_order(){
-        EventStore eventStore =new EventStore();
+    public void should_throw_exception_if_choose_delivery_mode_on_not_created_order() {
+        EventStore eventStore = new EventStore();
         Order order = new Order(eventStore);
 
         assertThatThrownBy(order::chooseDeliveryMode).isInstanceOf(CannotChooseDeliveryModeOnNotCreatedOrder.class);
+    }
 
+    @Test
+    public void should_throw_exception_if_choose_delivery_mode_on_not_created_order_when_another_one_is_created() {
+        EventStore eventStore = new EventStore();
+
+        Order createdOrder = new Order(eventStore);
+        createdOrder.create();
+
+        Order notCreatedOrder = new Order(eventStore);
+
+        assertThatThrownBy(notCreatedOrder::chooseDeliveryMode).isInstanceOf(CannotChooseDeliveryModeOnNotCreatedOrder.class);
     }
 }
