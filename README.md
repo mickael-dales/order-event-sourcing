@@ -1,5 +1,6 @@
 # order-event-sourcing
 
-- Create an Order
-- Add Delivery Mode
-- Exception if Order is not created
+- Create an order
+- Add delivery mode
+- Exception if order is not created
+- One event store for multiple orders
