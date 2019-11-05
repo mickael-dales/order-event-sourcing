@@ -1,4 +1,4 @@
 package fr.mdales.ordereventsourcing;
 
-public interface Event {
+public interface OrderEvent {
 }

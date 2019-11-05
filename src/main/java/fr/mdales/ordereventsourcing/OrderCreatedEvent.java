@@ -1,4 +1,4 @@
 package fr.mdales.ordereventsourcing;
 
-public class OrderCreatedEvent implements Event{
+public class OrderCreatedEvent implements OrderEvent {
 }
