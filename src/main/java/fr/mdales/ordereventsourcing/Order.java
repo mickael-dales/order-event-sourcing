@@ -2,29 +2,37 @@ package fr.mdales.ordereventsourcing;
 
 import fr.mdales.ordereventsourcing.exception.CannotChooseDeliveryModeOnNotCreatedOrder;
 
-public class Order {
+import java.util.Random;
 
+public class Order {
     private final EventStore eventStore;
     private boolean created;
+    private int id;
 
     public Order(EventStore eventStore) {
         this.eventStore = eventStore;
-        this.created = eventStore.getEvents().stream().anyMatch(event -> event instanceof OrderCreatedEvent);
+    }
+
+    public Order(EventStore eventStore, int id) {
+        this.eventStore = eventStore;
+        this.id = id;
+        this.created = eventStore.getEvents().stream().anyMatch(event -> event instanceof OrderCreatedEvent && event.getId() == id);
     }
 
     public void create() {
-        this.created = true;
-        eventStore.add(new OrderCreatedEvent());
+        created = true;
+        id = new Random().nextInt();
+        eventStore.add(new OrderCreatedEvent(id));
     }
 
     public void chooseDeliveryMode() {
-        if (!isCreated()){
+        if (!isCreated()) {
             throw new CannotChooseDeliveryModeOnNotCreatedOrder();
         }
         eventStore.add(new DeliveryModeChosenEvent());
     }
 
-    private boolean isCreated(){
-        return this.created;
+    private boolean isCreated() {
+        return created;
     }
 }

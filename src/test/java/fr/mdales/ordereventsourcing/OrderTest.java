@@ -5,6 +5,8 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
+import java.util.Random;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -25,8 +27,10 @@ public class OrderTest {
     @Test
     public void should_add_delivery_mode_chosen_event_on_event_store_if_choose_delivery_mode() {
         EventStore eventStore = new EventStore();
-        eventStore.add(new OrderCreatedEvent());
-        Order order = new Order(eventStore);
+        int orderId = new Random().nextInt();
+
+        eventStore.add(new OrderCreatedEvent(orderId));
+        Order order = new Order(eventStore, orderId);
 
         order.chooseDeliveryMode();
 
@@ -43,13 +47,13 @@ public class OrderTest {
     }
 
     @Test
-    public void should_throw_exception_if_choose_delivery_mode_on_not_created_order_when_another_one_is_created() {
+    public void should_order_not_created_if_choose_delivery_mode_on_not_created_order_when_another_one_is_created() {
         EventStore eventStore = new EventStore();
+        int createdOrderId = new Random().nextInt();
+        eventStore.add(new OrderCreatedEvent(createdOrderId));
+        int notCreatedOrderId = new Random().nextInt();
 
-        Order createdOrder = new Order(eventStore);
-        createdOrder.create();
-
-        Order notCreatedOrder = new Order(eventStore);
+        Order notCreatedOrder = new Order(eventStore, notCreatedOrderId);
 
         assertThatThrownBy(notCreatedOrder::chooseDeliveryMode).isInstanceOf(CannotChooseDeliveryModeOnNotCreatedOrder.class);
     }
