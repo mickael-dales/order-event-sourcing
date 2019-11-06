@@ -29,7 +29,7 @@ public class Order {
         if (!isCreated()) {
             throw new CannotChooseDeliveryModeOnNotCreatedOrder();
         }
-        eventStore.add(new DeliveryModeChosenEvent());
+        eventStore.add(new DeliveryModeChosenEvent(id));
     }
 
     private boolean isCreated() {
