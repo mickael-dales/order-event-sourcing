@@ -1,6 +1,7 @@
 package fr.mdales.ordereventsourcing;
 
 import fr.mdales.ordereventsourcing.exception.CannotChooseDeliveryModeOnNotCreatedOrder;
+import fr.mdales.ordereventsourcing.exception.CannotPaidOrder;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -57,4 +58,31 @@ public class OrderTest {
 
         assertThatThrownBy(notCreatedOrder::chooseDeliveryMode).isInstanceOf(CannotChooseDeliveryModeOnNotCreatedOrder.class);
     }
+
+    @Test
+    public void should_add_paid_order_event_if_paid_an_order_with_delivery_mode_chosen(){
+        EventStore eventStore = new EventStore();
+        int orderId = new Random().nextInt();
+
+        eventStore.add(new OrderCreatedEvent(orderId));
+        eventStore.add(new DeliveryModeChosenEvent());
+        Order order = new Order(eventStore, orderId);
+
+        order.pay();
+
+        assertThat(eventStore.getEvents()).hasSize(3);
+        assertThat(eventStore.getEvents().get(2)).isInstanceOf(PaidEvent.class);
+    }
+
+    @Test
+    public void should_throw_exception_if_paid_an_order_with_no_delivery_mode_chosen(){
+        EventStore eventStore = new EventStore();
+        int orderId = new Random().nextInt();
+
+        eventStore.add(new OrderCreatedEvent(orderId));
+        Order order = new Order(eventStore, orderId);
+
+        assertThatThrownBy(order::pay).isInstanceOf(CannotPaidOrder.class);
+    }
+
 }
