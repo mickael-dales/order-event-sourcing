@@ -3,7 +3,7 @@ package fr.mdales.ordereventsourcing;
 import java.util.ArrayList;
 import java.util.List;
 
-public class EventStore {
+public class OrderEventStore {
 
     private final List<OrderEvent> events = new ArrayList<>();
 
@@ -13,5 +13,12 @@ public class EventStore {
 
     public void add(OrderEvent orderEvent) {
         events.add(orderEvent);
+    }
+
+    public Order getOrder(int id){
+        Order order =new Order(this, id);
+        events.stream().filter(event -> event.getId() == id).
+                forEachOrdered(orderEvent -> orderEvent.apply(order));
+        return order;
     }
 }

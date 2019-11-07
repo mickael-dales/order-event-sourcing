@@ -9,6 +9,12 @@ public class DeliveryModeChosenEvent implements OrderEvent{
     }
 
     @Override
+    public Order apply(Order order) {
+        order.apply(this);
+        return order;
+    }
+
+    @Override
     public int getId() {
         return orderId;
     }

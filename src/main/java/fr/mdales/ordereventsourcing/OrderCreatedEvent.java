@@ -13,6 +13,12 @@ public class OrderCreatedEvent implements OrderEvent {
     }
 
     @Override
+    public Order apply(Order order) {
+        order.apply(this);
+        return order;
+    }
+
+    @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (!(o instanceof OrderCreatedEvent)) return false;
