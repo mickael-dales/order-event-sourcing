@@ -113,5 +113,22 @@ public class OrderTest {
         assertThatThrownBy(order::pay).isInstanceOf(CannotPaidOrder.class);
     }
 
+    @Test
+    public void should_add_change_delivery_and_update_amount_if_change_delivery_mode() {
+        OrderEventStore eventStore = new OrderEventStore();
+        int orderId = new Random().nextInt();
+
+        eventStore.add(new OrderCreatedEvent(orderId, Arrays.asList(new Item("Château Pipeau", 20), new Item("Château Lalouvière", 30))));
+        eventStore.add(new DeliveryModeChosenEvent(orderId, relayTwoDeliveryMode));
+        Order order = eventStore.getOrder(orderId);
+
+        DeliveryMode newDeliveryMode = new DeliveryMode("Home normal", 4);
+        order.changeDeliveryMode(newDeliveryMode);
+
+        assertThat(eventStore.getEvents()).hasSize(3);
+        assertThat(eventStore.getEvents().get(2)).isInstanceOf(DeliveryModeChanged.class);
+        assertThat(order.getDeliveryMode()).isEqualTo(newDeliveryMode);
+        assertThat(order.getAmount()).isEqualTo(54);
+    }
 
 }

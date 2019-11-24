@@ -1,6 +1,7 @@
 package fr.mdales.ordereventsourcing;
 
 import fr.mdales.ordereventsourcing.exception.CannotChooseDeliveryModeOnNotCreatedOrder;
+import fr.mdales.ordereventsourcing.exception.CannotDeleteNotSetDeleveryMode;
 import fr.mdales.ordereventsourcing.exception.CannotPaidOrder;
 
 import java.util.ArrayList;
@@ -9,10 +10,10 @@ import java.util.Random;
 
 public class Order {
     private final OrderEventStore eventStore;
-    // private OrderStatusEnum status = OrderStatusEnum.NONE;
     private Integer id;
     private final List<Item> items = new ArrayList<>();
     private DeliveryMode deliveryMode;
+    private double amount = 0;
     private boolean paid;
 
     public Order(OrderEventStore eventStore) {
@@ -67,13 +68,24 @@ public class Order {
         return this.deliveryMode != null;
     }
 
+    public void changeDeliveryMode(DeliveryMode deliveryMode) {
+        if (this.deliveryMode == null) {
+            throw new CannotDeleteNotSetDeleveryMode();
+        }
+        OrderEvent event = new DeliveryModeChanged(id, deliveryMode);
+        event.apply(this);
+        eventStore.add(event);
+    }
+
     public void apply(OrderCreatedEvent event) {
         id = event.getOrderId();
         items.addAll(event.getItems());
+        amount = items.stream().mapToDouble(Item::getPrice).sum();
     }
 
     public void apply(DeliveryModeChosenEvent event) {
         deliveryMode = event.getDeliveryMode();
+        amount += event.getDeliveryMode().getPrice();
     }
 
     public void apply(PaidEvent event) {
@@ -85,13 +97,14 @@ public class Order {
     }
 
     public double getAmount() {
-        return items.stream().mapToDouble(Item::getPrice).sum() + getDeliveryModePrice();
+        return amount;
     }
 
-    private double getDeliveryModePrice() {
-        if (deliveryMode == null) {
-            return 0;
+    public void apply(DeliveryModeChanged event) {
+        if (deliveryMode != null) {
+            amount -= deliveryMode.getPrice();
         }
-        return deliveryMode.getPrice();
+        deliveryMode = event.getDeliveryMode();
+        amount += event.getDeliveryMode().getPrice();
     }
 }
