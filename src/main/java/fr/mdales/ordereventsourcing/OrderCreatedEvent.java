@@ -1,14 +1,18 @@
 package fr.mdales.ordereventsourcing;
 
+import java.util.List;
+
 public class OrderCreatedEvent implements OrderEvent {
     private int orderId;
+    private final List<Item> items;
 
-    public OrderCreatedEvent(int orderId) {
+    public OrderCreatedEvent(int orderId, List<Item> items) {
         this.orderId = orderId;
+        this.items = items;
     }
 
     @Override
-    public int getId() {
+    public int getOrderId() {
         return orderId;
     }
 
@@ -31,5 +35,9 @@ public class OrderCreatedEvent implements OrderEvent {
     @Override
     public int hashCode() {
         return orderId;
+    }
+
+    public List<Item> getItems() {
+        return items;
     }
 }

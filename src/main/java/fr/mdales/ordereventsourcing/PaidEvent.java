@@ -2,14 +2,20 @@ package fr.mdales.ordereventsourcing;
 
 public class PaidEvent implements OrderEvent {
     private final int orderId;
+    private final double amount;
 
-    public PaidEvent(int orderId) {
+    public PaidEvent(int orderId, double amount) {
         this.orderId = orderId;
+        this.amount = amount;
     }
 
     @Override
-    public int getId() {
+    public int getOrderId() {
         return orderId;
+    }
+
+    public double getAmount() {
+        return amount;
     }
 
     @Override

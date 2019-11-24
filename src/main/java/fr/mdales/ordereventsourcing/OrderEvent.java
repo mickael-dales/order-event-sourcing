@@ -2,7 +2,7 @@ package fr.mdales.ordereventsourcing;
 
 public interface OrderEvent {
 
-    int getId();
+    int getOrderId();
 
     Order apply(Order order);
 }

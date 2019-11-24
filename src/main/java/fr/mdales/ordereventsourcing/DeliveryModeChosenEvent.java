@@ -1,11 +1,13 @@
 package fr.mdales.ordereventsourcing;
 
-public class DeliveryModeChosenEvent implements OrderEvent{
+public class DeliveryModeChosenEvent implements OrderEvent {
 
     private final int orderId;
+    private final DeliveryMode deliveryMode;
 
-    public DeliveryModeChosenEvent(int orderId) {
+    public DeliveryModeChosenEvent(int orderId, DeliveryMode deliveryMode) {
         this.orderId = orderId;
+        this.deliveryMode = deliveryMode;
     }
 
     @Override
@@ -15,7 +17,11 @@ public class DeliveryModeChosenEvent implements OrderEvent{
     }
 
     @Override
-    public int getId() {
+    public int getOrderId() {
         return orderId;
+    }
+
+    public DeliveryMode getDeliveryMode() {
+        return deliveryMode;
     }
 }

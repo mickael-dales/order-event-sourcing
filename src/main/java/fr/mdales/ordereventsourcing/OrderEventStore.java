@@ -17,7 +17,7 @@ public class OrderEventStore {
 
     public Order getOrder(int id){
         Order order =new Order(this, id);
-        events.stream().filter(event -> event.getId() == id).
+        events.stream().filter(event -> event.getOrderId() == id).
                 forEachOrdered(orderEvent -> orderEvent.apply(order));
         return order;
     }
