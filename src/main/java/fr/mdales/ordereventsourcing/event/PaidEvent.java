@@ -1,4 +1,6 @@
-package fr.mdales.ordereventsourcing;
+package fr.mdales.ordereventsourcing.event;
+
+import fr.mdales.ordereventsourcing.Order;
 
 public class PaidEvent implements OrderEvent {
     private final int orderId;

@@ -1,5 +1,7 @@
 package fr.mdales.ordereventsourcing;
 
+import fr.mdales.ordereventsourcing.event.*;
+import fr.mdales.ordereventsourcing.exception.CannotAddOrRemoveItemOnPaidOrder;
 import fr.mdales.ordereventsourcing.exception.CannotChooseDeliveryModeOnNotCreatedOrder;
 import fr.mdales.ordereventsourcing.exception.CannotPaidOrder;
 import org.junit.Test;
@@ -16,6 +18,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @RunWith(JUnit4.class)
 public class OrderTest {
 
+    public static final Item CHATEAU_PIPEAU = new Item("Château Pipeau", 20);
+    public static final Item TARIQUET = new Item("Tariquet", 10);
+    public static final Item CHATEAU_LALOUVIERE = new Item("Château Lalouvière", 30);
     private DeliveryMode relayTwoDeliveryMode = new DeliveryMode("Relay", 2);
 
     @Test
@@ -35,7 +40,7 @@ public class OrderTest {
     public void should_add_delivery_mode_chosen_event_on_event_store_if_choose_delivery_mode() {
         OrderEventStore eventStore = new OrderEventStore();
         int orderId = new Random().nextInt();
-        eventStore.add(new OrderCreatedEvent(orderId, Arrays.asList(new Item("Château Pipeau", 20), new Item("Château Lalouvière", 30))));
+        eventStore.add(new OrderCreatedEvent(orderId, Arrays.asList(CHATEAU_PIPEAU, CHATEAU_LALOUVIERE)));
         Order order = eventStore.getOrder(orderId);
 
         order.chooseDeliveryMode(relayTwoDeliveryMode);
@@ -70,7 +75,7 @@ public class OrderTest {
     public void should_order_total_price_is_equals_to_basket_items_price_sum_if_order_created() {
         OrderEventStore eventStore = new OrderEventStore();
         int orderId = new Random().nextInt();
-        eventStore.add(new OrderCreatedEvent(orderId, Arrays.asList(new Item("Château Pipeau", 20), new Item("Château Lalouvière", 30))));
+        eventStore.add(new OrderCreatedEvent(orderId, Arrays.asList(CHATEAU_PIPEAU, CHATEAU_LALOUVIERE)));
 
         Order order = eventStore.getOrder(orderId);
         assertThat(order.getAmount()).isEqualTo(50);
@@ -80,7 +85,7 @@ public class OrderTest {
     public void should_order_total_price_is_equals_to_sum_basket_items_price_sum_and_delivery_price_if_order_delivery_mode_chosen() {
         OrderEventStore eventStore = new OrderEventStore();
         int orderId = new Random().nextInt();
-        eventStore.add(new OrderCreatedEvent(orderId, Arrays.asList(new Item("Château Pipeau", 20), new Item("Château Lalouvière", 30))));
+        eventStore.add(new OrderCreatedEvent(orderId, Arrays.asList(CHATEAU_PIPEAU, CHATEAU_LALOUVIERE)));
         eventStore.add(new DeliveryModeChosenEvent(orderId, new DeliveryMode("Relay", 2)));
         Order order = eventStore.getOrder(orderId);
         assertThat(order.getAmount()).isEqualTo(52);
@@ -118,7 +123,7 @@ public class OrderTest {
         OrderEventStore eventStore = new OrderEventStore();
         int orderId = new Random().nextInt();
 
-        eventStore.add(new OrderCreatedEvent(orderId, Arrays.asList(new Item("Château Pipeau", 20), new Item("Château Lalouvière", 30))));
+        eventStore.add(new OrderCreatedEvent(orderId, Arrays.asList(CHATEAU_PIPEAU, CHATEAU_LALOUVIERE)));
         eventStore.add(new DeliveryModeChosenEvent(orderId, relayTwoDeliveryMode));
         Order order = eventStore.getOrder(orderId);
 
@@ -131,4 +136,63 @@ public class OrderTest {
         assertThat(order.getAmount()).isEqualTo(54);
     }
 
+    @Test
+    public void should_item_added_event_and_update_amount_and_update_item_list_if_add_item() {
+        OrderEventStore eventStore = new OrderEventStore();
+        int orderId = new Random().nextInt();
+
+        eventStore.add(new OrderCreatedEvent(orderId, Arrays.asList(CHATEAU_PIPEAU, CHATEAU_LALOUVIERE)));
+        eventStore.add(new DeliveryModeChosenEvent(orderId, relayTwoDeliveryMode));
+        Order order = eventStore.getOrder(orderId);
+        Item tariquet = TARIQUET;
+
+        order.addItem(tariquet);
+        assertThat(eventStore.getEvents()).hasSize(3);
+        assertThat(eventStore.getEvents().get(2)).isInstanceOf(ItemAdded.class);
+        assertThat(order.getItems()).contains(tariquet);
+        assertThat(order.getAmount()).isEqualTo(62);
+    }
+
+    @Test
+    public void should_throw_exception_if_add_item_on_paid_order() {
+        OrderEventStore eventStore = new OrderEventStore();
+        int orderId = new Random().nextInt();
+
+        eventStore.add(new OrderCreatedEvent(orderId, Arrays.asList(CHATEAU_PIPEAU, CHATEAU_LALOUVIERE)));
+        eventStore.add(new DeliveryModeChosenEvent(orderId, relayTwoDeliveryMode));
+        eventStore.add(new PaidEvent(orderId, 52));
+        Order order = eventStore.getOrder(orderId);
+        Item tariquet = TARIQUET;
+
+        assertThatThrownBy(() -> order.addItem(tariquet)).isInstanceOf(CannotAddOrRemoveItemOnPaidOrder.class);
+    }
+
+    @Test
+    public void should_throw_exception_if_remove_item_on_paid_order() {
+        OrderEventStore eventStore = new OrderEventStore();
+        int orderId = new Random().nextInt();
+
+        eventStore.add(new OrderCreatedEvent(orderId, Arrays.asList(CHATEAU_PIPEAU, CHATEAU_LALOUVIERE)));
+        eventStore.add(new DeliveryModeChosenEvent(orderId, relayTwoDeliveryMode));
+        eventStore.add(new PaidEvent(orderId, CHATEAU_PIPEAU.getPrice() + CHATEAU_LALOUVIERE.getPrice() + relayTwoDeliveryMode.getPrice()));
+        Order order = eventStore.getOrder(orderId);
+
+        assertThatThrownBy(() -> order.removeItem(CHATEAU_PIPEAU)).isInstanceOf(CannotAddOrRemoveItemOnPaidOrder.class);
+    }
+
+    @Test
+    public void should_item_removed_event_and_update_amount_and_update_item_list_if_remove_item() {
+        OrderEventStore eventStore = new OrderEventStore();
+        int orderId = new Random().nextInt();
+
+        eventStore.add(new OrderCreatedEvent(orderId, Arrays.asList(CHATEAU_PIPEAU, CHATEAU_LALOUVIERE)));
+        eventStore.add(new DeliveryModeChosenEvent(orderId, relayTwoDeliveryMode));
+        Order order = eventStore.getOrder(orderId);
+
+        order.removeItem(CHATEAU_PIPEAU);
+        assertThat(eventStore.getEvents()).hasSize(3);
+        assertThat(eventStore.getEvents().get(2)).isInstanceOf(ItemRemoved.class);
+        assertThat(order.getItems()).doesNotContain(CHATEAU_PIPEAU);
+        assertThat(order.getAmount()).isEqualTo(CHATEAU_LALOUVIERE.getPrice() + relayTwoDeliveryMode.getPrice());
+    }
 }

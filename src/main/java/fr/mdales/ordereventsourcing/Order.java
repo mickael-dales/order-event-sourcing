@@ -1,5 +1,7 @@
 package fr.mdales.ordereventsourcing;
 
+import fr.mdales.ordereventsourcing.event.*;
+import fr.mdales.ordereventsourcing.exception.CannotAddOrRemoveItemOnPaidOrder;
 import fr.mdales.ordereventsourcing.exception.CannotChooseDeliveryModeOnNotCreatedOrder;
 import fr.mdales.ordereventsourcing.exception.CannotDeleteNotSetDeleveryMode;
 import fr.mdales.ordereventsourcing.exception.CannotPaidOrder;
@@ -77,6 +79,24 @@ public class Order {
         eventStore.add(event);
     }
 
+    public void addItem(Item item) {
+        if (isPaid()) {
+            throw new CannotAddOrRemoveItemOnPaidOrder();
+        }
+        OrderEvent event = new ItemAdded(id, item);
+        event.apply(this);
+        eventStore.add(event);
+    }
+
+    public void removeItem(Item item) {
+        if (isPaid()) {
+            throw new CannotAddOrRemoveItemOnPaidOrder();
+        }
+        OrderEvent event = new ItemRemoved(id, item);
+        event.apply(this);
+        eventStore.add(event);
+    }
+
     public void apply(OrderCreatedEvent event) {
         id = event.getOrderId();
         items.addAll(event.getItems());
@@ -106,5 +126,16 @@ public class Order {
         }
         deliveryMode = event.getDeliveryMode();
         amount += event.getDeliveryMode().getPrice();
+    }
+
+    public void apply(ItemAdded event) {
+        items.add(event.getItem());
+        amount += event.getItem().getPrice();
+    }
+
+
+    public void apply(ItemRemoved event) {
+        items.remove(event.getItem());
+        amount -= event.getItem().getPrice();
     }
 }

@@ -1,4 +1,7 @@
-package fr.mdales.ordereventsourcing;
+package fr.mdales.ordereventsourcing.event;
+
+import fr.mdales.ordereventsourcing.DeliveryMode;
+import fr.mdales.ordereventsourcing.Order;
 
 public class DeliveryModeChanged implements OrderEvent {
     private final int orderId;

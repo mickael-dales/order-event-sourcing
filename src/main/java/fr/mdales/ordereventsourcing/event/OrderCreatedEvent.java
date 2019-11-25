@@ -1,4 +1,7 @@
-package fr.mdales.ordereventsourcing;
+package fr.mdales.ordereventsourcing.event;
+
+import fr.mdales.ordereventsourcing.Item;
+import fr.mdales.ordereventsourcing.Order;
 
 import java.util.List;
 

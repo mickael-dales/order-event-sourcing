@@ -1,5 +1,7 @@
 package fr.mdales.ordereventsourcing;
 
+import fr.mdales.ordereventsourcing.event.OrderEvent;
+
 import java.util.ArrayList;
 import java.util.List;
 
