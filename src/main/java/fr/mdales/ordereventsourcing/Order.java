@@ -3,7 +3,6 @@ package fr.mdales.ordereventsourcing;
 import fr.mdales.ordereventsourcing.event.*;
 import fr.mdales.ordereventsourcing.exception.CannotAddOrRemoveItemOnPaidOrder;
 import fr.mdales.ordereventsourcing.exception.CannotChooseDeliveryModeOnNotCreatedOrder;
-import fr.mdales.ordereventsourcing.exception.CannotDeleteNotSetDeleveryMode;
 import fr.mdales.ordereventsourcing.exception.CannotPaidOrder;
 
 import java.util.ArrayList;
@@ -36,11 +35,15 @@ public class Order {
         }
     }
 
+    public Integer getId() {
+        return id;
+    }
+
     public void chooseDeliveryMode(DeliveryMode deliveryMode) {
         if (items.isEmpty()) {
             throw new CannotChooseDeliveryModeOnNotCreatedOrder();
         }
-        OrderEvent event = new DeliveryModeChosenEvent(id, deliveryMode);
+        OrderEvent event = this.deliveryMode == null ? new DeliveryModeChosenEvent(id, deliveryMode) : new DeliveryModeChanged(id, deliveryMode);
         event.apply(this);
         eventStore.add(event);
     }
@@ -68,15 +71,6 @@ public class Order {
 
     private boolean isDeliveryModeChosen() {
         return this.deliveryMode != null;
-    }
-
-    public void changeDeliveryMode(DeliveryMode deliveryMode) {
-        if (this.deliveryMode == null) {
-            throw new CannotDeleteNotSetDeleveryMode();
-        }
-        OrderEvent event = new DeliveryModeChanged(id, deliveryMode);
-        event.apply(this);
-        eventStore.add(event);
     }
 
     public void addItem(Item item) {

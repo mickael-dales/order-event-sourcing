@@ -128,7 +128,7 @@ public class OrderTest {
         Order order = eventStore.getOrder(orderId);
 
         DeliveryMode newDeliveryMode = new DeliveryMode("Home normal", 4);
-        order.changeDeliveryMode(newDeliveryMode);
+        order.chooseDeliveryMode(newDeliveryMode);
 
         assertThat(eventStore.getEvents()).hasSize(3);
         assertThat(eventStore.getEvents().get(2)).isInstanceOf(DeliveryModeChanged.class);
