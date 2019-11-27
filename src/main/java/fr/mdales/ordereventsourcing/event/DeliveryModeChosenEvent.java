@@ -1,7 +1,7 @@
 package fr.mdales.ordereventsourcing.event;
 
-import fr.mdales.ordereventsourcing.DeliveryMode;
-import fr.mdales.ordereventsourcing.Order;
+import fr.mdales.ordereventsourcing.domain.DeliveryMode;
+import fr.mdales.ordereventsourcing.domain.Order;
 
 public class DeliveryModeChosenEvent implements OrderEvent {
 
@@ -26,5 +26,10 @@ public class DeliveryModeChosenEvent implements OrderEvent {
 
     public DeliveryMode getDeliveryMode() {
         return deliveryMode;
+    }
+
+    @Override
+    public void dispatch(EventDispatcher eventDispatcher) {
+
     }
 }

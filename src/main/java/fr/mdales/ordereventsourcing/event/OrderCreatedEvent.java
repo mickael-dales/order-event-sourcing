@@ -1,7 +1,7 @@
 package fr.mdales.ordereventsourcing.event;
 
-import fr.mdales.ordereventsourcing.Item;
-import fr.mdales.ordereventsourcing.Order;
+import fr.mdales.ordereventsourcing.domain.Item;
+import fr.mdales.ordereventsourcing.domain.Order;
 
 import java.util.List;
 
@@ -42,5 +42,10 @@ public class OrderCreatedEvent implements OrderEvent {
 
     public List<Item> getItems() {
         return items;
+    }
+
+    @Override
+    public void dispatch(EventDispatcher eventDispatcher) {
+        eventDispatcher.execute(this);
     }
 }

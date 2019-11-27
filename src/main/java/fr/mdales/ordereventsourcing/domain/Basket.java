@@ -1,4 +1,4 @@
-package fr.mdales.ordereventsourcing;
+package fr.mdales.ordereventsourcing.domain;
 
 import java.util.ArrayList;
 import java.util.List;

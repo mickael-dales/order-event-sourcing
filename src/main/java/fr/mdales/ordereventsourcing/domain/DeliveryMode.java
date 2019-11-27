@@ -1,4 +1,4 @@
-package fr.mdales.ordereventsourcing;
+package fr.mdales.ordereventsourcing.domain;
 
 public class DeliveryMode {
     private final String mode;

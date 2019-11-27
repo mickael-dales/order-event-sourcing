@@ -1,10 +1,10 @@
-package fr.mdales.ordereventsourcing;
+package fr.mdales.ordereventsourcing.command;
 
 public class Item {
     private final String name;
-    private final Double price;
+    private final double price;
 
-    public Item(String name, double price){
+    public Item(String name, double price) {
         this.name = name;
         this.price = price;
     }
@@ -13,8 +13,7 @@ public class Item {
         return name;
     }
 
-    public Double getPrice() {
+    public double getPrice() {
         return price;
     }
 }
-

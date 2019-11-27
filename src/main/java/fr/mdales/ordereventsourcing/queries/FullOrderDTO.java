@@ -1,4 +1,4 @@
-package fr.mdales.ordereventsourcing.web;
+package fr.mdales.ordereventsourcing.queries;
 
 import java.util.ArrayList;
 import java.util.List;

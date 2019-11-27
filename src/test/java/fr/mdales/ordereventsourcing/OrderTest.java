@@ -1,5 +1,9 @@
 package fr.mdales.ordereventsourcing;
 
+import fr.mdales.ordereventsourcing.domain.Basket;
+import fr.mdales.ordereventsourcing.domain.DeliveryMode;
+import fr.mdales.ordereventsourcing.domain.Item;
+import fr.mdales.ordereventsourcing.domain.Order;
 import fr.mdales.ordereventsourcing.event.*;
 import fr.mdales.ordereventsourcing.exception.CannotAddOrRemoveItemOnPaidOrder;
 import fr.mdales.ordereventsourcing.exception.CannotChooseDeliveryModeOnNotCreatedOrder;
@@ -18,10 +22,11 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @RunWith(JUnit4.class)
 public class OrderTest {
 
-    public static final Item CHATEAU_PIPEAU = new Item("Château Pipeau", 20);
-    public static final Item TARIQUET = new Item("Tariquet", 10);
-    public static final Item CHATEAU_LALOUVIERE = new Item("Château Lalouvière", 30);
-    private DeliveryMode relayTwoDeliveryMode = new DeliveryMode("Relay", 2);
+    private static final Item CHATEAU_PIPEAU = new Item("Château Pipeau", 20);
+    private static final Item TARIQUET = new Item("Tariquet", 10);
+    private static final Item CHATEAU_LALOUVIERE = new Item("Château Lalouvière", 30);
+    private static final DeliveryMode HOME_NORMAL = new DeliveryMode("Home normal", 4);
+    private static final DeliveryMode RELAY = new DeliveryMode("Relay", 2);
 
     @Test
     public void should_add_order_created_event_on_event_store_if_create_order() {
@@ -29,25 +34,46 @@ public class OrderTest {
         Order order = new Order(eventStore);
         Basket basket = new Basket();
 
-        order.create(basket);
+        OrderEvent event = order.create(basket);
 
-        assertThat(order.getItems()).containsExactly(basket.getItems().toArray(new Item[basket.getItems().size()]));
-        assertThat(eventStore.getEvents()).hasSize(1);
-        assertThat(eventStore.getEvents().get(0)).isInstanceOf(OrderCreatedEvent.class);
+        assertThat(event).isInstanceOf(OrderCreatedEvent.class);
     }
 
     @Test
-    public void should_add_delivery_mode_chosen_event_on_event_store_if_choose_delivery_mode() {
+    public void should_order_has_event_items_if_apply_order_created_event() {
+        int orderId = new Random().nextInt();
+        OrderCreatedEvent event = new OrderCreatedEvent(orderId, Arrays.asList(CHATEAU_LALOUVIERE, CHATEAU_PIPEAU));
+
+        Order order = new Order(new OrderEventStore());
+        order.apply(event);
+
+        assertThat(order.getItems()).containsExactlyInAnyOrder(CHATEAU_PIPEAU, CHATEAU_LALOUVIERE);
+    }
+
+    @Test
+    public void should_return_delivery_mode_chosen_event_if_choose_delivery_mode() {
         OrderEventStore eventStore = new OrderEventStore();
         int orderId = new Random().nextInt();
         eventStore.add(new OrderCreatedEvent(orderId, Arrays.asList(CHATEAU_PIPEAU, CHATEAU_LALOUVIERE)));
         Order order = eventStore.getOrder(orderId);
 
-        order.chooseDeliveryMode(relayTwoDeliveryMode);
+        OrderEvent event = order.chooseDeliveryMode(RELAY);
 
-        assertThat(order.getDeliveryMode()).isEqualTo(relayTwoDeliveryMode);
-        assertThat(eventStore.getEvents()).hasSize(2);
-        assertThat(eventStore.getEvents().get(1)).isInstanceOf(DeliveryModeChosenEvent.class);
+        assertThat(event).isInstanceOf(DeliveryModeChosenEvent.class);
+        assertThat(((DeliveryModeChosenEvent) event).getDeliveryMode()).isEqualTo(RELAY);
+    }
+
+    @Test
+    public void should_delivery_mode_filled_if_apply_delivery_mode_chosen_event() {
+        OrderEventStore eventStore = new OrderEventStore();
+        int orderId = new Random().nextInt();
+        eventStore.add(new OrderCreatedEvent(orderId, Arrays.asList(CHATEAU_PIPEAU, CHATEAU_LALOUVIERE)));
+        Order order = eventStore.getOrder(orderId);
+        DeliveryModeChosenEvent event = new DeliveryModeChosenEvent(orderId, RELAY);
+
+        order.apply(event);
+
+        assertThat(order.getDeliveryMode()).isEqualTo(RELAY);
     }
 
     @Test
@@ -55,7 +81,7 @@ public class OrderTest {
         OrderEventStore eventStore = new OrderEventStore();
         Order order = new Order(eventStore);
 
-        assertThatThrownBy(() -> order.chooseDeliveryMode(relayTwoDeliveryMode)).isInstanceOf(CannotChooseDeliveryModeOnNotCreatedOrder.class);
+        assertThatThrownBy(() -> order.chooseDeliveryMode(RELAY)).isInstanceOf(CannotChooseDeliveryModeOnNotCreatedOrder.class);
     }
 
     @Test
@@ -68,7 +94,7 @@ public class OrderTest {
 
         Order notCreatedOrder = eventStore.getOrder(notCreatedOrderId);
 
-        assertThatThrownBy(() -> notCreatedOrder.chooseDeliveryMode(relayTwoDeliveryMode)).isInstanceOf(CannotChooseDeliveryModeOnNotCreatedOrder.class);
+        assertThatThrownBy(() -> notCreatedOrder.chooseDeliveryMode(RELAY)).isInstanceOf(CannotChooseDeliveryModeOnNotCreatedOrder.class);
     }
 
     @Test
@@ -97,7 +123,7 @@ public class OrderTest {
         int orderId = new Random().nextInt();
 
         eventStore.add(new OrderCreatedEvent(orderId, new ArrayList<>()));
-        eventStore.add(new DeliveryModeChosenEvent(orderId, relayTwoDeliveryMode));
+        eventStore.add(new DeliveryModeChosenEvent(orderId, RELAY));
         Order order = eventStore.getOrder(orderId);
 
         order.pay();
@@ -119,20 +145,31 @@ public class OrderTest {
     }
 
     @Test
-    public void should_add_change_delivery_and_update_amount_if_change_delivery_mode() {
+    public void should_return_delivery_mode_change_event_if_choose_delivery_mode_when_delivery_is_set() {
         OrderEventStore eventStore = new OrderEventStore();
         int orderId = new Random().nextInt();
-
         eventStore.add(new OrderCreatedEvent(orderId, Arrays.asList(CHATEAU_PIPEAU, CHATEAU_LALOUVIERE)));
-        eventStore.add(new DeliveryModeChosenEvent(orderId, relayTwoDeliveryMode));
+        eventStore.add(new DeliveryModeChosenEvent(orderId, RELAY));
         Order order = eventStore.getOrder(orderId);
 
-        DeliveryMode newDeliveryMode = new DeliveryMode("Home normal", 4);
-        order.chooseDeliveryMode(newDeliveryMode);
+        OrderEvent event = order.chooseDeliveryMode(RELAY);
 
-        assertThat(eventStore.getEvents()).hasSize(3);
-        assertThat(eventStore.getEvents().get(2)).isInstanceOf(DeliveryModeChanged.class);
-        assertThat(order.getDeliveryMode()).isEqualTo(newDeliveryMode);
+        assertThat(event).isInstanceOf(DeliveryModeChanged.class);
+        assertThat(((DeliveryModeChanged) event).getDeliveryMode()).isEqualTo(RELAY);
+    }
+
+    @Test
+    public void should_delivery_mode_changed_and_amount_changed_if_apply_delivery_mode_changed_event() {
+        OrderEventStore eventStore = new OrderEventStore();
+        int orderId = new Random().nextInt();
+        eventStore.add(new OrderCreatedEvent(orderId, Arrays.asList(CHATEAU_PIPEAU, CHATEAU_LALOUVIERE)));
+        eventStore.add(new DeliveryModeChosenEvent(orderId, RELAY));
+        Order order = eventStore.getOrder(orderId);
+        DeliveryModeChanged event = new DeliveryModeChanged(orderId, HOME_NORMAL);
+
+        order.apply(event);
+
+        assertThat(order.getDeliveryMode()).isEqualTo(HOME_NORMAL);
         assertThat(order.getAmount()).isEqualTo(54);
     }
 
@@ -142,7 +179,7 @@ public class OrderTest {
         int orderId = new Random().nextInt();
 
         eventStore.add(new OrderCreatedEvent(orderId, Arrays.asList(CHATEAU_PIPEAU, CHATEAU_LALOUVIERE)));
-        eventStore.add(new DeliveryModeChosenEvent(orderId, relayTwoDeliveryMode));
+        eventStore.add(new DeliveryModeChosenEvent(orderId, RELAY));
         Order order = eventStore.getOrder(orderId);
         Item tariquet = TARIQUET;
 
@@ -159,12 +196,11 @@ public class OrderTest {
         int orderId = new Random().nextInt();
 
         eventStore.add(new OrderCreatedEvent(orderId, Arrays.asList(CHATEAU_PIPEAU, CHATEAU_LALOUVIERE)));
-        eventStore.add(new DeliveryModeChosenEvent(orderId, relayTwoDeliveryMode));
+        eventStore.add(new DeliveryModeChosenEvent(orderId, RELAY));
         eventStore.add(new PaidEvent(orderId, 52));
         Order order = eventStore.getOrder(orderId);
-        Item tariquet = TARIQUET;
 
-        assertThatThrownBy(() -> order.addItem(tariquet)).isInstanceOf(CannotAddOrRemoveItemOnPaidOrder.class);
+        assertThatThrownBy(() -> order.addItem(TARIQUET)).isInstanceOf(CannotAddOrRemoveItemOnPaidOrder.class);
     }
 
     @Test
@@ -173,8 +209,8 @@ public class OrderTest {
         int orderId = new Random().nextInt();
 
         eventStore.add(new OrderCreatedEvent(orderId, Arrays.asList(CHATEAU_PIPEAU, CHATEAU_LALOUVIERE)));
-        eventStore.add(new DeliveryModeChosenEvent(orderId, relayTwoDeliveryMode));
-        eventStore.add(new PaidEvent(orderId, CHATEAU_PIPEAU.getPrice() + CHATEAU_LALOUVIERE.getPrice() + relayTwoDeliveryMode.getPrice()));
+        eventStore.add(new DeliveryModeChosenEvent(orderId, RELAY));
+        eventStore.add(new PaidEvent(orderId, CHATEAU_PIPEAU.getPrice() + CHATEAU_LALOUVIERE.getPrice() + RELAY.getPrice()));
         Order order = eventStore.getOrder(orderId);
 
         assertThatThrownBy(() -> order.removeItem(CHATEAU_PIPEAU)).isInstanceOf(CannotAddOrRemoveItemOnPaidOrder.class);
@@ -186,13 +222,13 @@ public class OrderTest {
         int orderId = new Random().nextInt();
 
         eventStore.add(new OrderCreatedEvent(orderId, Arrays.asList(CHATEAU_PIPEAU, CHATEAU_LALOUVIERE)));
-        eventStore.add(new DeliveryModeChosenEvent(orderId, relayTwoDeliveryMode));
+        eventStore.add(new DeliveryModeChosenEvent(orderId, RELAY));
         Order order = eventStore.getOrder(orderId);
 
         order.removeItem(CHATEAU_PIPEAU);
         assertThat(eventStore.getEvents()).hasSize(3);
         assertThat(eventStore.getEvents().get(2)).isInstanceOf(ItemRemoved.class);
         assertThat(order.getItems()).doesNotContain(CHATEAU_PIPEAU);
-        assertThat(order.getAmount()).isEqualTo(CHATEAU_LALOUVIERE.getPrice() + relayTwoDeliveryMode.getPrice());
+        assertThat(order.getAmount()).isEqualTo(CHATEAU_LALOUVIERE.getPrice() + RELAY.getPrice());
     }
 }
